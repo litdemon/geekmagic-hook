@@ -55,7 +55,7 @@ HOOK_EVENTS = [
 ]
 
 DEFAULT_THEME = "default"
-IDLE_GM_THEME = 3  # Time Style 1
+PHOTO_ALBUM_THEME = 3  # Photo Album (image/GIF display mode)
 
 HTTP_TIMEOUT = 1.5  # seconds — hooks must not block Claude Code
 
@@ -204,7 +204,7 @@ class GeekMagic:
         Skips the API call if sw_en is already in the desired state to avoid a
         firmware side-effect: sending theme_list back to the device causes it to
         momentarily activate the first entry in the list (e.g. Weather Clock Today)
-        before our subsequent set_theme(2) call overrides it.
+        before our subsequent set_theme(PHOTO_ALBUM_THEME) call overrides it.
         """
         tl = self.get_theme_list()
         if not tl:
@@ -360,7 +360,7 @@ def _display_state(gm: GeekMagic, state: str, cfg: dict) -> None:
 
     # Disable auto-switching so the display stays on the GIF we set
     gm.set_auto_switch(False)
-    gm.set_theme(2)  # Photo Album (image-only mode)
+    gm.set_theme(PHOTO_ALBUM_THEME)  # Photo Album = theme 3
     # Device filelist shows paths as /image//filename.gif (double slash)
     image_path = upload_dir.rstrip("/") + "//" + gif_name
     ok = gm.set_image(image_path)

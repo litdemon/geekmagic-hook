@@ -20,11 +20,11 @@
 |------|-----------|
 | 0 | Weather Clock Today (시간 + 오늘 날씨) |
 | 1 | Weather Forecast (날씨 예보) |
-| 2 | Photo Album (이미지/GIF 슬라이드쇼) |
-| 3 | Time Style 1 |
-| 4 | Time Style 2 |
-| 5 | Time Style 3 |
-| 6 | Simple Weather Clock (시간 + 간단 날씨) |
+| 2 | Simple Weather Clock (시간 + 간단 날씨) |
+| 3 | Photo Album (이미지/GIF 슬라이드쇼) |
+| 4 | Time Style 1 |
+| 5 | Time Style 2 |
+| 6 | Time Style 3 |
 
 ---
 
@@ -210,7 +210,7 @@ GET /set?theme=<0-6>
 ```
 
 ```bash
-curl "http://10.10.10.4/set?theme=2"   # Photo Album으로 전환
+curl "http://10.10.10.4/set?theme=3"   # Photo Album으로 전환
 ```
 
 ### 자동 테마 전환 설정
@@ -224,8 +224,8 @@ GET /set?theme_list=<csv>&sw_en=<0|1>&theme_interval=<초>
 - `theme_interval`: 전환 간격 (초)
 
 ```bash
-# Photo Album(2)과 Time Style 1(3) 번갈아 표시, 30초 간격
-curl "http://10.10.10.4/set?theme_list=0,0,1,1,0,0,0&sw_en=1&theme_interval=30"
+# Photo Album(3)과 Time Style 1(4) 번갈아 표시, 30초 간격
+curl "http://10.10.10.4/set?theme_list=0,0,0,1,1,0,0&sw_en=1&theme_interval=30"
 ```
 
 ### 표시할 이미지 지정 (Photo Album 테마)
@@ -320,8 +320,8 @@ POST /update        # 펌웨어 업데이트 (multipart/form-data)
 Time Style과 Photo Album 테마를 자동 전환하고, 표시할 이미지를 지정한다.
 
 ```bash
-# 1) Photo Album(2)과 Time Style 1(3)을 30초 간격으로 번갈아 표시
-curl "http://10.10.10.4/set?theme_list=0,0,1,1,0,0,0&sw_en=1&theme_interval=30"
+# 1) Photo Album(3)과 Time Style 1(4)을 30초 간격으로 번갈아 표시
+curl "http://10.10.10.4/set?theme_list=0,0,0,1,1,0,0&sw_en=1&theme_interval=30"
 
 # 2) Photo Album에서 표시할 이미지 지정
 curl "http://10.10.10.4/set?img=/image/my_animation.gif"
@@ -363,7 +363,7 @@ curl "http://10.10.10.4/filelist?dir=/image/"
 
 ```bash
 # 1) Photo Album 테마 활성화
-curl "http://10.10.10.4/set?theme=2"
+curl "http://10.10.10.4/set?theme=3"
 
 # 2) 자동 표시(슬라이드쇼) 끄기
 curl "http://10.10.10.4/set?i_i=5&autoplay=0"
