@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "geekmagic-hook"
+version = "1.0.0"
+description = "Claude Code hooks for GeekMagic SmallTV-Ultra display"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+
+[project.urls]
+Homepage = "https://github.com/litdemon/geekmagic-hook"
+
+[project.scripts]
+geekmagic_hook = "geekmagic_hook.geekmagic_hook:main"
+
+[tool.setuptools.packages.find]
+include = ["geekmagic_hook*"]
+
+[tool.setuptools.package-data]
+geekmagic_hook = ["themes/default/*.gif"]

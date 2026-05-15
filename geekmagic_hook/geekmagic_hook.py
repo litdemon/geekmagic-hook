@@ -681,7 +681,17 @@ def cmd_theme(action: str, args: list[str]) -> int:
 # settings.local.json hook management
 # ---------------------------------------------------------------------------
 
-HOOK_CMD_TEMPLATE = str(HOME_DIR / "geekmagic_hook") + " --event {event}"
+def _get_self_cmd() -> str:
+    """Return the absolute path to the installed geekmagic_hook executable.
+
+    Works cross-platform (Mac, Linux, Windows):
+    - pipx / pip install  → shutil.which() finds the console-script wrapper
+    - direct invocation   → sys.argv[0] resolved to absolute path
+    """
+    found = shutil.which("geekmagic_hook")
+    if found:
+        return str(pathlib.Path(found).resolve())
+    return str(pathlib.Path(sys.argv[0]).resolve())
 
 
 def _load_settings(path: pathlib.Path) -> dict:
@@ -702,8 +712,9 @@ def _register_hooks(path: pathlib.Path) -> None:
     data = _load_settings(path)
     hooks = data.setdefault("hooks", {})
 
+    cmd_base = _get_self_cmd()
     for event in HOOK_EVENTS:
-        cmd = HOOK_CMD_TEMPLATE.format(event=event)
+        cmd = f"{cmd_base} --event {event}"
         entry = {"matcher": "", "hooks": [{"type": "command", "command": cmd}]}
         existing = hooks.setdefault(event, [])
         # Avoid duplicate registration
@@ -718,6 +729,12 @@ def _register_hooks(path: pathlib.Path) -> None:
     _save_settings(path, data)
 
 
+def _is_our_hook(command: str) -> bool:
+    """Return True if the hook command belongs to geekmagic_hook (any install path)."""
+    exe = pathlib.Path(command.split()[0]).name
+    return exe in ("geekmagic_hook", "geekmagic_hook.exe")
+
+
 def _unregister_hooks(path: pathlib.Path) -> None:
     data = _load_settings(path)
     hooks = data.get("hooks", {})
@@ -725,11 +742,10 @@ def _unregister_hooks(path: pathlib.Path) -> None:
     for event in HOOK_EVENTS:
         if event not in hooks:
             continue
-        cmd_prefix = str(HOME_DIR / "geekmagic_hook")
         hooks[event] = [
             h for h in hooks[event]
             if not any(
-                e.get("command", "").startswith(cmd_prefix)
+                _is_our_hook(e.get("command", ""))
                 for e in h.get("hooks", [])
             )
         ]
@@ -745,11 +761,10 @@ def _unregister_hooks(path: pathlib.Path) -> None:
 
 def _get_registered_hooks(path: pathlib.Path) -> list[str]:
     data = _load_settings(path)
-    cmd_prefix = str(HOME_DIR / "geekmagic_hook")
     registered = []
     for event, entries in data.get("hooks", {}).items():
         if any(
-            e.get("command", "").startswith(cmd_prefix)
+            _is_our_hook(e.get("command", ""))
             for h in entries
             for e in h.get("hooks", [])
         ):
