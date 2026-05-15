@@ -42,7 +42,8 @@ THEMES_DIR = HOME_DIR / "themes"
 
 BUNDLE_THEMES_DIR = pathlib.Path(__file__).parent / "themes"
 
-SETTINGS_LOCAL = pathlib.Path.home() / ".claude" / "settings.local.json"
+SETTINGS_LOCAL = pathlib.Path.home() / ".claude" / "settings.local.json"  # permissions only
+SETTINGS_HOOKS = pathlib.Path.home() / ".claude" / "settings.json"  # hooks must be here
 
 HOOK_EVENTS = [
     "UserPromptSubmit",
@@ -421,7 +422,7 @@ def cmd_setup(rescan: bool = False) -> int:
     if not SETTINGS_LOCAL.parent.exists():
         print(f"  Warning: {SETTINGS_LOCAL.parent} not found (is Claude Code installed?)")
 
-    answer = _prompt(f"  Register hooks in {SETTINGS_LOCAL}? [y/N] ").lower()
+    answer = _prompt(f"  Register hooks in {SETTINGS_HOOKS}? [y/N] ").lower()
     if answer != "y":
         print("Aborted.")
         return 0
@@ -442,8 +443,8 @@ def cmd_setup(rescan: bool = False) -> int:
         print(f"  {gif.name}: {status}")
 
     # --- Hook registration ---
-    print(f"\n[4/4] Registering hooks in {SETTINGS_LOCAL}…")
-    _register_hooks(SETTINGS_LOCAL)
+    print(f"\n[4/4] Registering hooks in {SETTINGS_HOOKS}…")
+    _register_hooks(SETTINGS_HOOKS)
 
     # --- Save config ---
     cfg["device_ip"] = ip
@@ -456,8 +457,8 @@ def cmd_setup(rescan: bool = False) -> int:
 def cmd_uninstall() -> int:
     """Remove all hooks from settings.local.json."""
     setup_logging(verbose=True)
-    print(f"Removing hooks from {SETTINGS_LOCAL}…")
-    _unregister_hooks(SETTINGS_LOCAL)
+    print(f"Removing hooks from {SETTINGS_HOOKS}…")
+    _unregister_hooks(SETTINGS_HOOKS)
     print("✓ Hooks removed. Restart Claude Code for changes to take effect.")
     return 0
 
@@ -472,7 +473,7 @@ def cmd_status() -> int:
     print(f"Config:        {CONFIG_FILE}")
     print(f"Home dir:      {HOME_DIR}")
     print(f"Active theme:  {cfg.get('active_theme', DEFAULT_THEME)}")
-    print(f"Settings file: {SETTINGS_LOCAL}")
+    print(f"Settings file: {SETTINGS_HOOKS} (hooks)")
     print()
 
     if ip:
@@ -493,7 +494,7 @@ def cmd_status() -> int:
 
     print()
     # Hook registration status
-    registered = _get_registered_hooks(SETTINGS_LOCAL)
+    registered = _get_registered_hooks(SETTINGS_HOOKS)
     if registered:
         print(f"Registered hooks ({len(registered)}):")
         for ev in registered:
