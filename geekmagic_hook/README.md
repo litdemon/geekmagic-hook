@@ -77,14 +77,21 @@ After `make install`, all runtime files live under `~/.geekmagic_hook/`:
 | Hook Event | State | GIF shown |
 |-----------|-------|-----------|
 | `UserPromptSubmit` | STARTING | `starting.gif` |
-| `PreToolUse` | TOOL USE | `requesting.gif` |
+| `PreToolUse` | REQUESTING | `requesting.gif` |
 | `PostToolUse` | WORKING | `working.gif` |
 | `SubagentStop` | WORKING | `working.gif` |
 | `Notification` (rate limit) | RATE LIMITED | `rate_limit.gif` |
 | `Notification` (permission) | WAITING | `waiting.gif` |
-| `Stop` | IDLE | GeekMagic theme 3 (time clock) |
+| `Stop` | IDLE | `waiting.gif` |
 
-`Notification` type is detected by scanning the `message` field in the hook's stdin JSON payload.
+All states use Photo Album (image-only) mode — auto theme switching is disabled
+while Claude Code is running. `Notification` type is detected by scanning the
+`message` field in the hook's stdin JSON payload.
+
+> **Note:** There is no hook for Claude Code process exit. The display remains
+> on `waiting.gif` after the app closes. To restore the device's normal
+> (auto-switching) mode, run `geekmagic_hook test` or adjust the display
+> directly on the device.
 
 ## Custom Themes
 

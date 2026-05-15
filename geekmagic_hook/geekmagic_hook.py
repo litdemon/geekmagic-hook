@@ -307,9 +307,7 @@ EVENT_STATES = {
 
 
 def _gif_name_for(state: str, theme: str) -> Optional[str]:
-    """Return GIF filename for given state and theme, or None for idle."""
-    if state == "idle":
-        return None
+    """Return GIF filename for given state and theme."""
     mapping = {
         "starting": "starting.gif",
         "requesting": "requesting.gif",
@@ -317,6 +315,7 @@ def _gif_name_for(state: str, theme: str) -> Optional[str]:
         "waiting": "waiting.gif",
         "rate_limit": "rate_limit.gif",
         "subagent": "subagent.gif",
+        "idle": "waiting.gif",   # Claude is idle — show waiting GIF
     }
     return mapping.get(state)
 
@@ -336,22 +335,21 @@ def _parse_notification(stdin_data: str) -> str:
 
 
 def _display_state(gm: GeekMagic, state: str, cfg: dict) -> None:
-    """Update GeekMagic display for the given state."""
+    """Update GeekMagic display for the given state.
+
+    All states (including idle) show a GIF in Photo Album (image-only) mode.
+    Auto theme switching is disabled whenever Claude Code is running so the
+    display stays locked on the current GIF.
+    """
     theme_name = cfg.get("active_theme", DEFAULT_THEME)
     upload_dir = cfg.get("upload_dir", "/image/")
 
-    if state == "idle":
-        # Just re-enable auto theme switching — preserves whatever the user configured
-        # (theme list, interval, Time Style / weather type, etc.)
-        ok = gm.set_auto_switch(True)
-        log.info("idle → auto_switch on: %s", "ok" if ok else "fail")
-        return
-
     gif_name = _gif_name_for(state, theme_name)
     if not gif_name:
+        log.debug("No GIF mapped for state=%s, skipping", state)
         return
 
-    # Disable auto-switching so the display stays on the GIF we're about to show
+    # Disable auto-switching so the display stays on the GIF we set
     gm.set_auto_switch(False)
     gm.set_theme(2)  # Photo Album (image-only mode)
     # Device filelist shows paths as /image//filename.gif (double slash)
@@ -582,12 +580,12 @@ def cmd_test() -> int:
         return 1
 
     states = [
-        ("starting", "UserPromptSubmit"),
+        ("starting",   "UserPromptSubmit"),
         ("requesting", "PreToolUse"),
-        ("working", "PostToolUse"),
-        ("waiting", "Notification (permission)"),
+        ("working",    "PostToolUse"),
+        ("waiting",    "Notification (permission)"),
         ("rate_limit", "Notification (rate_limit)"),
-        ("idle", "Stop"),
+        ("idle",       "Stop → waiting.gif"),
     ]
 
     print(f"Testing display states on {ip}…")
