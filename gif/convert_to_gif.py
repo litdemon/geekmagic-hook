@@ -6,9 +6,9 @@ Requirements:
     pip install imageio[pyav] Pillow
 
 Usage:
-    python3 convert_to_gif.py                        # convert current dir → ./output/
-    python3 convert_to_gif.py -i ./my_videos         # custom input dir
-    python3 convert_to_gif.py -i video.mov -o ./out  # single file
+    python3 convert_to_gif.py <input_folder_or_file> [-o ./out]
+    python3 convert_to_gif.py .                      # convert current dir → ./output/
+    python3 convert_to_gif.py ./my_videos           # custom input dir
 """
 
 import argparse
@@ -95,7 +95,8 @@ def main():
         description="Convert videos to 240x240 GIFs for GeekMagic display"
     )
     parser.add_argument(
-        "-i", "--input",
+        "input",
+        nargs="?",
         default=".",
         help="Input video file or directory (default: current directory)",
     )
@@ -106,9 +107,9 @@ def main():
     )
     args = parser.parse_args()
 
-    input_path = os.path.expanduser(args.input)
+    input_path = os.path.abspath(os.path.expanduser(args.input))
     if args.output:
-        output_dir = os.path.expanduser(args.output)
+        output_dir = os.path.abspath(os.path.expanduser(args.output))
     else:
         base = input_path if os.path.isdir(input_path) else os.path.dirname(input_path)
         output_dir = os.path.join(base, "output")
