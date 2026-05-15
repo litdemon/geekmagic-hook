@@ -199,15 +199,24 @@ class GeekMagic:
         return None
 
     def set_auto_switch(self, enabled: bool) -> bool:
-        """Toggle auto theme switching, preserving the user's theme list and interval."""
+        """Toggle auto theme switching, preserving the user's theme list and interval.
+
+        Skips the API call if sw_en is already in the desired state to avoid a
+        firmware side-effect: sending theme_list back to the device causes it to
+        momentarily activate the first entry in the list (e.g. Weather Clock Today)
+        before our subsequent set_theme(2) call overrides it.
+        """
         tl = self.get_theme_list()
         if not tl:
             return False
+        desired = "1" if enabled else "0"
+        if tl.get("sw_en", "0") == desired:
+            log.debug("set_auto_switch: already sw_en=%s, skipping", desired)
+            return True  # already in desired state — no API call needed
         theme_list = tl.get("list", "0,0,1,1,0,0,0")
         sw_i = tl.get("sw_i", "30")
-        sw_en = 1 if enabled else 0
         return self._get(
-            f"/set?theme_list={theme_list}&sw_en={sw_en}&theme_interval={sw_i}"
+            f"/set?theme_list={theme_list}&sw_en={desired}&theme_interval={sw_i}"
         ) == "OK"
 
     def set_image(self, image_path: str) -> bool:
