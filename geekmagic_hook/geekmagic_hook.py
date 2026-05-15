@@ -91,9 +91,6 @@ log = logging.getLogger("geekmagic_hook")
 DEFAULT_CONFIG = {
     "device_ip": None,
     "active_theme": DEFAULT_THEME,
-    "idle_gm_theme": IDLE_GM_THEME,        # kept for backward compat / fallback
-    "idle_theme_list": "0,0,1,1,0,0,0",   # Photo Album(2) + Time Style 1(3) alternating
-    "idle_theme_interval": 30,             # seconds between theme switches when idle
     "upload_dir": "/image/",
     "log_level": "INFO",
 }
@@ -191,10 +188,26 @@ class GeekMagic:
     def set_theme(self, theme_id: int) -> bool:
         return self._get(f"/set?theme={theme_id}") == "OK"
 
-    def set_theme_auto(self, theme_list: str, sw_en: int, interval: int) -> bool:
-        """Enable/disable auto theme switching. sw_en=1 to enable, 0 to disable."""
+    def get_theme_list(self) -> Optional[dict]:
+        """Return current auto-switch settings: {list, sw_en, sw_i}."""
+        raw = self._get("/theme_list.json")
+        if raw:
+            try:
+                return json.loads(raw)
+            except Exception:
+                pass
+        return None
+
+    def set_auto_switch(self, enabled: bool) -> bool:
+        """Toggle auto theme switching, preserving the user's theme list and interval."""
+        tl = self.get_theme_list()
+        if not tl:
+            return False
+        theme_list = tl.get("list", "0,0,1,1,0,0,0")
+        sw_i = tl.get("sw_i", "30")
+        sw_en = 1 if enabled else 0
         return self._get(
-            f"/set?theme_list={theme_list}&sw_en={sw_en}&theme_interval={interval}"
+            f"/set?theme_list={theme_list}&sw_en={sw_en}&theme_interval={sw_i}"
         ) == "OK"
 
     def set_image(self, image_path: str) -> bool:
@@ -326,22 +339,21 @@ def _display_state(gm: GeekMagic, state: str, cfg: dict) -> None:
     """Update GeekMagic display for the given state."""
     theme_name = cfg.get("active_theme", DEFAULT_THEME)
     upload_dir = cfg.get("upload_dir", "/image/")
-    theme_list = cfg.get("idle_theme_list", "0,0,1,1,0,0,0")
-    theme_interval = cfg.get("idle_theme_interval", 30)
 
     if state == "idle":
-        # Enable time+image alternating mode (Photo Album ↔ Time Style 1)
-        ok = gm.set_theme_auto(theme_list, sw_en=1, interval=theme_interval)
-        log.info("idle → theme_auto(%s, interval=%ds): %s", theme_list, theme_interval, "ok" if ok else "fail")
+        # Just re-enable auto theme switching — preserves whatever the user configured
+        # (theme list, interval, Time Style / weather type, etc.)
+        ok = gm.set_auto_switch(True)
+        log.info("idle → auto_switch on: %s", "ok" if ok else "fail")
         return
 
     gif_name = _gif_name_for(state, theme_name)
     if not gif_name:
         return
 
-    # Disable auto-switching, then lock to Photo Album (image-only mode)
-    gm.set_theme_auto(theme_list, sw_en=0, interval=theme_interval)
-    gm.set_theme(2)
+    # Disable auto-switching so the display stays on the GIF we're about to show
+    gm.set_auto_switch(False)
+    gm.set_theme(2)  # Photo Album (image-only mode)
     # Device filelist shows paths as /image//filename.gif (double slash)
     image_path = upload_dir.rstrip("/") + "//" + gif_name
     ok = gm.set_image(image_path)
@@ -500,9 +512,6 @@ def cmd_status() -> int:
             print(f"  Model:       {info.get('m','')} {info.get('v','')}")
             print(f"  Free space:  {free_kb}/{total_kb} KB")
             print(f"  GM Theme:    {active}")
-            idle_list = cfg.get("idle_theme_list", "0,0,1,1,0,0,0")
-            idle_iv = cfg.get("idle_theme_interval", 30)
-            print(f"  Idle mode:   theme_list={idle_list}  interval={idle_iv}s (time+image alternating)")
     else:
         print("Device IP:     (not configured — run 'setup')")
 
