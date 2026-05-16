@@ -14,7 +14,7 @@ requires-python = ">=3.9"
 Homepage = "https://github.com/litdemon/geekmagic-hook"
 
 [project.scripts]
-geekmagic_hook = "geekmagic_hook.geekmagic_hook:main"
+geekmagic_hook = "geekmagic_hook.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["geekmagic_hook*"]

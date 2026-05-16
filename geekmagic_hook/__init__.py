@@ -1,3 +1,3 @@
-from .geekmagic_hook import main
+from .cli import main
 
 __all__ = ["main"]
