@@ -146,13 +146,13 @@ geekmagic_hook setup
 
 `setup` 명령 하나가 기기를 자동 감지하고, GIF를 업로드하고, 훅을 등록한다.
 
-`[스크린샷⑦: geekmagic_hook setup 실행 화면]`
+![Geekmagic Setup Screenshot](/Users/eschu/Desktop/geekmagic_setup.png)
 
 ---
 
 ## 이제 자리를 비워도 된다
 
-`[사진⑥: Claude Code 작업 중 + SmallTV-Ultra 연동 메인 사진]`
+![스크린샷 2026-05-16 오후 8.34.53](/Users/eschu/Desktop/스크린샷 2026-05-16 오후 8.34.53.png)
 
 이제 Claude Code를 돌려두고 다른 일을 해도, 책상 옆 작은 디스플레이를 흘깃 보는 것만으로 상황을 파악할 수 있다.
 
