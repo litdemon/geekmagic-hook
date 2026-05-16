@@ -67,17 +67,21 @@ class DisplayController:
         log.info("state=%s gif=%s: %s", state, gif_name, "ok" if ok else "fail")
 
     def parse_notification(self, stdin_data: str) -> str:
-        """Parse a Notification hook JSON payload and return a state name."""
+        """Parse a Notification hook JSON payload and return a state name.
+
+        Notification events mean Claude is alerting the user — treat them as
+        permission requests by default so the display always reflects that
+        user attention is needed.  Rate-limit messages are the only exception
+        that map to a different state.
+        """
         try:
             payload = json.loads(stdin_data)
             msg = str(payload.get("message", "")).lower()
             if any(k in msg for k in ("rate", "limit", "quota", "429")):
                 return "rate_limited"
-            if any(k in msg for k in ("permission", "allow", "approve", "deny")):
-                return "permission"
         except Exception:
             pass
-        return "working"
+        return "permission"
 
     def resolve_pretooluse_state(self, stdin_data: str) -> str:
         """Determine the display state for a PreToolUse event.
