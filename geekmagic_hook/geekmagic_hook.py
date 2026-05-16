@@ -329,6 +329,29 @@ def _gif_name_for(state: str, theme: str) -> Optional[str]:
     return mapping.get(state)
 
 
+def _is_tool_pre_approved(tool_name: str) -> bool:
+    """Return True if tool_name matches any entry in permissions.allow.
+
+    Claude Code allow patterns look like:
+      "Bash(git *)", "Read(*)", "Edit(*)", "Bash"
+    We match on the tool-name prefix only (before the first '(').
+    If no allow list is configured, returns False (permission will be requested).
+    """
+    for settings_path in (SETTINGS_LOCAL, SETTINGS_HOOKS):
+        if not settings_path.exists():
+            continue
+        try:
+            data = json.loads(settings_path.read_text())
+            allowed = data.get("permissions", {}).get("allow", [])
+            for pattern in allowed:
+                pat_tool = pattern.split("(")[0].strip()
+                if pat_tool.lower() == tool_name.lower():
+                    return True
+        except Exception:
+            pass
+    return False  # not found in any allow list → permission will be requested
+
+
 def _parse_notification(stdin_data: str) -> str:
     """Parse Notification hook JSON and return state name."""
     try:
@@ -394,6 +417,15 @@ def cmd_event(event: str) -> int:
         # First prompt in a fresh session → starting.gif; subsequent → prompt_received.gif
         prev = load_state().get("current")
         state = "starting" if prev is None else "prompt_received"
+    elif event == "PreToolUse":
+        stdin_data = sys.stdin.read() if not sys.stdin.isatty() else ""
+        try:
+            tool_name = json.loads(stdin_data).get("tool_name", "")
+        except Exception:
+            tool_name = ""
+        log.debug("PreToolUse tool_name=%s", tool_name)
+        # If tool is not in permissions.allow → user will be asked for permission
+        state = "calling_tools" if _is_tool_pre_approved(tool_name) else "permission"
     else:
         state = EVENT_STATES.get(event, "working")
 
