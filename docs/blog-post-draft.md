@@ -30,7 +30,7 @@ Claude가 뭔가를 실행하기 전에 내 승인을 기다리고 있었던 것
 
 그때 눈에 들어온 게 책상 한쪽에 놓인 **GeekMagic SmallTV-Ultra**였다.
 
-`[사진②: SmallTV-Ultra 날씨 시계 모드]`
+![SmallTV-Ultra 날씨 시계 모드](/Users/eschu/Desktop/weather_clock.png)
 
 남양주, 27°C, 4:15. 날씨와 시간을 보여주는 작은 정사각형 디스플레이. 한동안 시계로만 써왔는데, 문득 이런 생각이 들었다.
 
@@ -56,8 +56,6 @@ curl "http://10.10.10.4/set?theme=3"
 curl -F "file=@working.gif" "http://10.10.10.4/doUpload?dir=/image/"
 ```
 
-`[스크린샷③: curl API 호출 터미널 화면]`
-
 인증도 없다. 같은 와이파이에 있으면 누구나 제어할 수 있다. 로컬 네트워크 전용이니 보안 문제는 없지만, 덕분에 연동이 극도로 간단해진다.
 
 ---
@@ -68,7 +66,7 @@ API를 파악했으니, 이제 Claude Code와 연결할 방법을 찾아야 했�
 
 Claude Code 문서를 뒤지다가 **훅(Hook) 시스템**을 발견했다. `~/.claude/settings.json`에 명령어를 등록해두면, Claude Code가 상태를 바꿀 때마다 그 명령어를 자동으로 실행해준다.
 
-`[스크린샷④: settings.json 훅 등록 화면]`
+![settings.json 훅 등록 화면](https://cdn-images-1.medium.com/max/1600/1*DshFX0407rbiWQi32_c9NQ.png)
 
 이벤트는 6가지다.
 
