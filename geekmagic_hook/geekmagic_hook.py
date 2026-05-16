@@ -306,25 +306,25 @@ def _guess_subnet() -> str:
 # ---------------------------------------------------------------------------
 
 EVENT_STATES = {
-    "UserPromptSubmit": "starting",
-    "PreToolUse": "requesting",
-    "PostToolUse": "working",
-    "SubagentStop": "working",
-    "Stop": "idle",
-    "Notification": None,  # determined by message content
+    "UserPromptSubmit": "starting",   # cmd_event branches to prompt_received after first
+    "PreToolUse":       "calling_tools",
+    "PostToolUse":      "working",
+    "SubagentStop":     "working",
+    "Stop":             "idle",
+    "Notification":     None,         # determined by message content
 }
 
 
 def _gif_name_for(state: str, theme: str) -> Optional[str]:
     """Return GIF filename for given state and theme."""
     mapping = {
-        "starting": "starting.gif",
-        "requesting": "requesting.gif",
-        "working": "working.gif",
-        "waiting": "waiting.gif",
-        "rate_limit": "rate_limit.gif",
-        "subagent": "subagent.gif",
-        "idle": "waiting.gif",   # Claude is idle — show waiting GIF
+        "starting":        "starting.gif",       # first UserPromptSubmit in session
+        "prompt_received": "prompt_received.gif", # subsequent UserPromptSubmits
+        "calling_tools":   "calling_tools.gif",   # PreToolUse
+        "working":         "working.gif",          # PostToolUse / SubagentStop
+        "idle":            "waiting.gif",          # Stop — waiting for next prompt
+        "permission":      "permission.gif",       # Notification: needs user approval
+        "rate_limited":    "rate_limited.gif",     # Notification: API rate limit
     }
     return mapping.get(state)
 
@@ -335,9 +335,9 @@ def _parse_notification(stdin_data: str) -> str:
         payload = json.loads(stdin_data)
         msg = str(payload.get("message", "")).lower()
         if any(k in msg for k in ("rate", "limit", "quota", "429")):
-            return "rate_limit"
+            return "rate_limited"
         if any(k in msg for k in ("permission", "allow", "approve", "deny")):
-            return "waiting"
+            return "permission"
     except Exception:
         pass
     return "working"
@@ -390,6 +390,10 @@ def cmd_event(event: str) -> int:
     if event == "Notification":
         stdin_data = sys.stdin.read() if not sys.stdin.isatty() else ""
         state = _parse_notification(stdin_data)
+    elif event == "UserPromptSubmit":
+        # First prompt in a fresh session → starting.gif; subsequent → prompt_received.gif
+        prev = load_state().get("current")
+        state = "starting" if prev is None else "prompt_received"
     else:
         state = EVENT_STATES.get(event, "working")
 
@@ -589,12 +593,13 @@ def cmd_test() -> int:
         return 1
 
     states = [
-        ("starting",   "UserPromptSubmit"),
-        ("requesting", "PreToolUse"),
-        ("working",    "PostToolUse"),
-        ("waiting",    "Notification (permission)"),
-        ("rate_limit", "Notification (rate_limit)"),
-        ("idle",       "Stop → waiting.gif"),
+        ("starting",        "UserPromptSubmit (첫 번째)"),
+        ("prompt_received", "UserPromptSubmit (이후)"),
+        ("calling_tools",   "PreToolUse"),
+        ("working",         "PostToolUse / SubagentStop"),
+        ("permission",      "Notification (permission)"),
+        ("rate_limited",    "Notification (rate_limit)"),
+        ("idle",            "Stop → waiting.gif"),
     ]
 
     print(f"Testing display states on {ip}…")

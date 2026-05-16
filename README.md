@@ -8,13 +8,14 @@ Every time Claude Code changes state (thinking, using a tool, waiting, rate-limi
 
 | Claude Code State | GIF shown |
 |-------------------|-----------|
-| Session start / prompt received | `starting.gif` |
-| Calling a tool (Bash, Read, Edit…) | `requesting.gif` |
+| Session first start | `starting.gif` |
+| Prompt received (subsequent) | `prompt_received.gif` |
+| Calling a tool (Bash, Read, Edit…) | `calling_tools.gif` |
 | Tool finished, still working | `working.gif` |
 | Subagent completed | `working.gif` |
 | Idle — waiting for next prompt | `waiting.gif` |
-| Waiting for your permission | `waiting.gif` |
-| Rate-limited | `rate_limit.gif` |
+| Waiting for your permission | `permission.gif` |
+| Rate-limited | `rate_limited.gif` |
 
 ## Requirements
 
