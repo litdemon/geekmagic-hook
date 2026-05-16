@@ -424,8 +424,14 @@ def cmd_event(event: str) -> int:
         except Exception:
             tool_name = ""
         log.debug("PreToolUse tool_name=%s", tool_name)
-        # If tool is not in permissions.allow → user will be asked for permission
-        state = "calling_tools" if _is_tool_pre_approved(tool_name) else "permission"
+        if not tool_name:
+            # stdin parse failure — safe fallback, don't assume permission needed
+            state = "calling_tools"
+        elif _is_tool_pre_approved(tool_name):
+            state = "calling_tools"
+        else:
+            # tool not in permissions.allow → user will be asked for permission
+            state = "permission"
     else:
         state = EVENT_STATES.get(event, "working")
 
@@ -749,7 +755,8 @@ def _install_binary() -> Optional[pathlib.Path]:
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest = dest_dir / src.name  # preserves .exe suffix on Windows
     try:
-        shutil.copy2(src, dest)
+        if src.resolve() != dest.resolve():  # skip if already running from dest
+            shutil.copy2(src, dest)
         if sys.platform != "win32":
             dest.chmod(dest.stat().st_mode | 0o111)  # ensure +x
         return dest
