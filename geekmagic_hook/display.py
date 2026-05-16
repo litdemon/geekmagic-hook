@@ -23,7 +23,6 @@ class DisplayController:
         "UserPromptSubmit": "starting",       # branched to prompt_received after first
         "PreToolUse":       "calling_tools",  # may become "permission" after stdin parse
         "PostToolUse":      "working",
-        "SubagentStop":     "working",
         "Stop":             "idle",
         "Notification":     None,             # determined by message content
     }
@@ -33,7 +32,7 @@ class DisplayController:
         "starting":        "starting.gif",        # first UserPromptSubmit in session
         "prompt_received": "prompt_received.gif",  # subsequent UserPromptSubmits
         "calling_tools":   "calling_tools.gif",    # PreToolUse (auto-approved)
-        "working":         "working.gif",           # PostToolUse / SubagentStop
+        "working":         "working.gif",           # PostToolUse
         "idle":            "waiting.gif",           # Stop — waiting for next prompt
         "permission":      "permission.gif",        # needs user approval
         "rate_limited":    "rate_limited.gif",      # API rate limit hit

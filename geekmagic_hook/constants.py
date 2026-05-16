@@ -28,7 +28,6 @@ HOOK_EVENTS = [
     "PostToolUse",
     "Stop",
     "Notification",
-    "SubagentStop",
 ]
 
 DEFAULT_THEME = "default"
