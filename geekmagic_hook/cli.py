@@ -13,6 +13,7 @@ from .commands import (
     cmd_theme,
     cmd_uninstall,
 )
+from . import __version__
 from .constants import HOOK_EVENTS
 
 
@@ -27,6 +28,11 @@ def main() -> int:
             "  geekmagic_hook --event PreToolUse # hook execution mode (called by Claude Code)"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"geekmagic_hook {__version__}",
     )
     parser.add_argument(
         "--event",
