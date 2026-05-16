@@ -413,11 +413,22 @@ def cmd_setup(rescan: bool = False) -> int:
     setup_logging(verbose=True)
     HOME_DIR.mkdir(parents=True, exist_ok=True)
 
+    # --- Binary install ---
+    print("\n[1/5] Installing binary to PATH…")
+    installed = _install_binary()
+    if installed:
+        print(f"  ✓ {installed}")
+        in_path = shutil.which("geekmagic_hook")
+        if not in_path or pathlib.Path(in_path).resolve() != installed.resolve():
+            print(f"  ⚠ Add {installed.parent} to your PATH if not already present")
+    else:
+        print("  ⚠ Could not install binary — will use current invocation path")
+
     cfg = load_config()
     ip = cfg.get("device_ip")
 
     # --- Device discovery ---
-    print("\n[1/4] Searching for GeekMagic device…")
+    print("\n[2/5] Searching for GeekMagic device…")
     if ip and not rescan:
         gm = GeekMagic(ip)
         if gm.is_online():
@@ -452,7 +463,7 @@ def cmd_setup(rescan: bool = False) -> int:
     print(f"  Free space: {free_kb} KB")
 
     # --- Permission ---
-    print("\n[2/4] Claude Code hook registration")
+    print("\n[3/5] Claude Code hook registration")
     if not SETTINGS_LOCAL.parent.exists():
         print(f"  Warning: {SETTINGS_LOCAL.parent} not found (is Claude Code installed?)")
 
@@ -462,7 +473,7 @@ def cmd_setup(rescan: bool = False) -> int:
         return 0
 
     # --- GIF upload ---
-    print("\n[3/4] Uploading GIFs to device…")
+    print("\n[4/5] Uploading GIFs to device…")
     src_dir = BUNDLE_THEMES_DIR / DEFAULT_THEME
     dest_themes = THEMES_DIR / DEFAULT_THEME
     dest_themes.mkdir(parents=True, exist_ok=True)
@@ -477,7 +488,7 @@ def cmd_setup(rescan: bool = False) -> int:
         print(f"  {gif.name}: {status}")
 
     # --- Hook registration ---
-    print(f"\n[4/4] Registering hooks in {SETTINGS_HOOKS}…")
+    print(f"\n[5/5] Registering hooks in {SETTINGS_HOOKS}…")
     _register_hooks(SETTINGS_HOOKS)
 
     # --- Save config ---
@@ -686,13 +697,48 @@ def cmd_theme(action: str, args: list[str]) -> int:
 # settings.local.json hook management
 # ---------------------------------------------------------------------------
 
+def _user_bin_dir() -> pathlib.Path:
+    """Return the platform-appropriate user-local bin directory."""
+    if sys.platform == "win32":
+        base = pathlib.Path(os.environ.get("LOCALAPPDATA", str(pathlib.Path.home())))
+        return base / "Programs" / "geekmagic_hook"
+    return pathlib.Path.home() / ".local" / "bin"
+
+
+def _install_binary() -> Optional[pathlib.Path]:
+    """Copy this executable to the user-local bin dir and make it executable.
+
+    Called during setup so the hook command always points to a stable,
+    PATH-accessible location regardless of how pip/pipx installed the package.
+    Returns the installed path, or None on failure.
+    """
+    src = pathlib.Path(sys.argv[0]).resolve()
+    dest_dir = _user_bin_dir()
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = dest_dir / src.name  # preserves .exe suffix on Windows
+    try:
+        shutil.copy2(src, dest)
+        if sys.platform != "win32":
+            dest.chmod(dest.stat().st_mode | 0o111)  # ensure +x
+        return dest
+    except Exception as e:
+        log.debug("_install_binary failed: %s", e)
+        return None
+
+
 def _get_self_cmd() -> str:
     """Return the absolute path to the installed geekmagic_hook executable.
 
-    Works cross-platform (Mac, Linux, Windows):
-    - pipx / pip install  → shutil.which() finds the console-script wrapper
-    - direct invocation   → sys.argv[0] resolved to absolute path
+    Priority:
+    1. ~/.local/bin/geekmagic_hook  (installed by setup — always stable)
+    2. shutil.which()               (pipx installs symlink here)
+    3. sys.argv[0]                  (direct invocation fallback)
     """
+    candidate = _user_bin_dir() / (
+        "geekmagic_hook.exe" if sys.platform == "win32" else "geekmagic_hook"
+    )
+    if candidate.exists():
+        return str(candidate)
     found = shutil.which("geekmagic_hook")
     if found:
         return str(pathlib.Path(found).resolve())

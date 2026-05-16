@@ -21,8 +21,9 @@ geekmagic_hook setup
 # Cycle through all 7 states visually (2s each) — primary dev verification
 geekmagic_hook test
 
-# After editing geekmagic_hook.py locally, the running binary must be refreshed:
-cp geekmagic_hook/geekmagic_hook.py ~/.geekmagic_hook/geekmagic_hook
+# After editing geekmagic_hook.py locally, re-run setup to refresh the binary:
+# setup [1/5] copies the script to ~/.local/bin/geekmagic_hook automatically
+geekmagic_hook setup
 
 # Convert .mov source files → 240×240 GIFs (requires imageio[pyav] + Pillow)
 cd gif
@@ -74,7 +75,7 @@ Claude Code fires hook event
 - **stdlib only** — no third-party dependencies in `geekmagic_hook.py`.
 - **HTTP timeout 1.5s** — hooks must never block Claude Code; all failures exit 0.
 - **Hooks must be in `~/.claude/settings.json`** (not `settings.local.json`).
-- **Installed binary vs source**: hooks call `~/.geekmagic_hook/geekmagic_hook` (the file registered at `setup` time). Editing `geekmagic_hook/geekmagic_hook.py` does **not** automatically update it — you must `cp` or re-run `setup`.
+- **Installed binary vs source**: `setup` copies the script to `~/.local/bin/geekmagic_hook` (Mac/Linux) or `%LOCALAPPDATA%\Programs\geekmagic_hook\` (Windows) and registers hooks pointing there. Editing `geekmagic_hook/geekmagic_hook.py` does **not** automatically update it — re-run `geekmagic_hook setup` to refresh.
 
 ## File Layout
 
