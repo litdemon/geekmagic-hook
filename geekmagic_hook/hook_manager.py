@@ -5,7 +5,9 @@ import logging
 import os
 import pathlib
 import shutil
+import subprocess
 import sys
+import sysconfig
 from typing import Optional
 
 from .constants import HOOK_EVENTS, SETTINGS_HOOKS
@@ -16,8 +18,9 @@ log = logging.getLogger("geekmagic_hook")
 class HookManager:
     """Manages geekmagic_hook entries in ~/.claude/settings.json.
 
-    Also handles copying the executable to a stable, PATH-accessible
-    location so hook commands keep working after the source moves.
+    Also handles installing the package via pip so the entry-point binary
+    lands in the correct user-scripts directory and hooks can reference it
+    with a stable, PATH-accessible path.
     """
 
     def __init__(self, settings_path: pathlib.Path = SETTINGS_HOOKS) -> None:
@@ -90,22 +93,98 @@ class HookManager:
     # ------------------------------------------------------------------
 
     def install_binary(self) -> Optional[pathlib.Path]:
-        """Write a wrapper script to the user-local bin directory.
+        """Install the package via pip and return the entry-point path.
 
-        Now that geekmagic_hook is a multi-module package (not a single file),
-        we generate a small Python shim that adds the package source to sys.path
-        and delegates to geekmagic_hook.cli:main.  This works whether the package
-        is pip-installed or run directly from source.
+        Runs ``pip install -e <project_root>`` so the geekmagic_hook script
+        is placed in the standard user-scripts directory
+        (e.g. ~/.local/bin on Linux, ~/Library/Python/X.Y/bin on macOS)
+        and package metadata (version etc.) stays up to date.
 
-        Returns the installed path, or None on failure.
+        Falls back to writing a minimal wrapper script if pip fails.
+
+        Returns the installed binary path, or None on complete failure.
         """
+        pkg_root = pathlib.Path(__file__).parent.parent.resolve()
+        exe_name = "geekmagic_hook.exe" if sys.platform == "win32" else "geekmagic_hook"
+
+        # --- pip install -e <project_root> ---
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "-e", str(pkg_root)],
+            capture_output=True,
+            text=True,
+        )
+
+        if result.returncode == 0:
+            # Find where pip put the script
+            installed = self._find_pip_script(exe_name)
+            if installed:
+                return installed
+            log.debug("pip succeeded but script not found on PATH; stderr=%s", result.stderr.strip())
+        else:
+            log.debug("pip install -e failed: %s", result.stderr.strip())
+
+        # --- Fallback: wrapper script ---
+        return self._write_wrapper(exe_name, str(pkg_root))
+
+    def get_self_cmd(self) -> str:
+        """Return the absolute path to the installed geekmagic_hook executable.
+
+        Priority:
+        1. Python user-scripts dir  (pip --user install / pip install -e .)
+        2. shutil.which()            (pipx, system install, or custom PATH)
+        3. sys.argv[0]               (direct invocation fallback)
+        """
+        exe_name = "geekmagic_hook.exe" if sys.platform == "win32" else "geekmagic_hook"
+
+        candidate = self._user_bin_dir() / exe_name
+        if candidate.exists():
+            return str(candidate)
+
+        found = shutil.which("geekmagic_hook")
+        if found:
+            return str(pathlib.Path(found).resolve())
+
+        return str(pathlib.Path(sys.argv[0]).resolve())
+
+    # ------------------------------------------------------------------
+    # Internals
+    # ------------------------------------------------------------------
+
+    def _user_bin_dir(self) -> pathlib.Path:
+        """Return the Python user-scripts directory for the running interpreter.
+
+        Uses sysconfig so the path matches exactly where pip --user installs
+        scripts (e.g. ~/Library/Python/3.9/bin on macOS, ~/.local/bin on Linux).
+        """
+        if sys.platform == "win32":
+            base = pathlib.Path(os.environ.get("LOCALAPPDATA", str(pathlib.Path.home())))
+            return base / "Programs" / "geekmagic_hook"
+
+        scheme = "posix_user"
+        scripts = sysconfig.get_path("scripts", scheme)
+        if scripts:
+            return pathlib.Path(scripts)
+        return pathlib.Path.home() / ".local" / "bin"   # sane fallback
+
+    def _find_pip_script(self, exe_name: str) -> Optional[pathlib.Path]:
+        """Locate the script that pip just installed."""
+        # 1. Known user-scripts dir
+        candidate = self._user_bin_dir() / exe_name
+        if candidate.exists():
+            return candidate
+
+        # 2. PATH (covers system-wide or virtualenv installs)
+        found = shutil.which("geekmagic_hook")
+        if found:
+            return pathlib.Path(found).resolve()
+
+        return None
+
+    def _write_wrapper(self, exe_name: str, pkg_root: str) -> Optional[pathlib.Path]:
+        """Write a minimal Python shim as a fallback when pip is unavailable."""
         dest_dir = self._user_bin_dir()
         dest_dir.mkdir(parents=True, exist_ok=True)
-        exe_name = "geekmagic_hook.exe" if sys.platform == "win32" else "geekmagic_hook"
         dest = dest_dir / exe_name
-
-        # Resolve the package root (two levels up from this file)
-        pkg_root = str(pathlib.Path(__file__).parent.parent.resolve())
 
         wrapper = (
             "#!/usr/bin/env python3\n"
@@ -121,40 +200,12 @@ class HookManager:
         try:
             dest.write_text(wrapper)
             if sys.platform != "win32":
-                dest.chmod(dest.stat().st_mode | 0o111)  # ensure +x
+                dest.chmod(dest.stat().st_mode | 0o111)
+            log.debug("Wrote wrapper to %s", dest)
             return dest
         except Exception as e:
-            log.debug("install_binary failed: %s", e)
+            log.debug("_write_wrapper failed: %s", e)
             return None
-
-    def get_self_cmd(self) -> str:
-        """Return the absolute path to the installed geekmagic_hook executable.
-
-        Priority:
-        1. ~/.local/bin/geekmagic_hook  (installed by setup — always stable)
-        2. shutil.which()               (pipx installs a symlink here)
-        3. sys.argv[0]                  (direct invocation fallback)
-        """
-        candidate = self._user_bin_dir() / (
-            "geekmagic_hook.exe" if sys.platform == "win32" else "geekmagic_hook"
-        )
-        if candidate.exists():
-            return str(candidate)
-        found = shutil.which("geekmagic_hook")
-        if found:
-            return str(pathlib.Path(found).resolve())
-        return str(pathlib.Path(sys.argv[0]).resolve())
-
-    # ------------------------------------------------------------------
-    # Internals
-    # ------------------------------------------------------------------
-
-    def _user_bin_dir(self) -> pathlib.Path:
-        """Return the platform-appropriate user-local bin directory."""
-        if sys.platform == "win32":
-            base = pathlib.Path(os.environ.get("LOCALAPPDATA", str(pathlib.Path.home())))
-            return base / "Programs" / "geekmagic_hook"
-        return pathlib.Path.home() / ".local" / "bin"
 
     def _is_our_hook(self, command: str) -> bool:
         """Return True if *command* belongs to geekmagic_hook (any install path)."""

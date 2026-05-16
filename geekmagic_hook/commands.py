@@ -94,16 +94,17 @@ def cmd_setup(rescan: bool = False) -> int:
 
     manager = HookManager()
 
-    # [1/5] Install binary
-    print("\n[1/5] Installing binary to PATH…")
+    # [1/5] Install binary via pip
+    print("\n[1/5] Installing geekmagic_hook via pip…")
     installed = manager.install_binary()
     if installed:
         print(f"  ✓ {installed}")
         in_path = shutil.which("geekmagic_hook")
-        if not in_path or pathlib.Path(in_path).resolve() != installed.resolve():
-            print(f"  ⚠ Add {installed.parent} to your PATH if not already present")
+        if not in_path:
+            print(f"  ⚠ Add {installed.parent} to your PATH")
+            print(f"    e.g. export PATH=\"{installed.parent}:$PATH\"")
     else:
-        print("  ⚠ Could not install binary — will use current invocation path")
+        print("  ⚠ pip install failed — will use current invocation path")
 
     cfg = AppConfig()
     ip = cfg.get("device_ip")
