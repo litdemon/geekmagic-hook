@@ -5,7 +5,7 @@ import logging
 from typing import Optional
 
 from .config import AppConfig
-from .constants import DEFAULT_THEME, PHOTO_ALBUM_THEME, SETTINGS_HOOKS, SETTINGS_LOCAL
+from .constants import DEFAULT_THEME, PHOTO_ALBUM_THEME
 from .device import GeekMagic
 
 log = logging.getLogger("geekmagic_hook")
@@ -18,13 +18,14 @@ class DisplayController:
     three-step display sequence (disable auto-switch → set theme → set image).
     """
 
-    # Default state derived from each hook event (may be overridden in cmd_event)
+    # Default state derived from each hook event
     EVENT_STATES: dict[str, Optional[str]] = {
-        "UserPromptSubmit": "starting",       # branched to prompt_received after first
-        "PreToolUse":       "calling_tools",  # may become "permission" after stdin parse
-        "PostToolUse":      "working",
-        "Stop":             "idle",
-        "Notification":     None,             # determined by message content
+        "UserPromptSubmit":  "starting",        # branched to prompt_received after first
+        "PreToolUse":        "calling_tools",
+        "PostToolUse":       "working",
+        "Stop":              "idle",
+        "Notification":      None,              # determined by message content
+        "PermissionRequest": "permission",      # Claude stopped, waiting for user selection
     }
 
     # Maps state name → GIF filename stored on the device
@@ -80,50 +81,5 @@ class DisplayController:
                 return "rate_limited"
         except Exception:
             pass
-        return "permission"
+        return None  # unknown notifications are ignored
 
-    def resolve_pretooluse_state(self, stdin_data: str) -> str:
-        """Determine the display state for a PreToolUse event.
-
-        Reads tool_name from stdin JSON and checks permissions.allow.
-        Falls back to 'calling_tools' on any parse failure.
-        """
-        try:
-            tool_name = json.loads(stdin_data).get("tool_name", "")
-        except Exception:
-            tool_name = ""
-
-        log.debug("PreToolUse tool_name=%s", tool_name)
-
-        if not tool_name:
-            # stdin parse failure — safe fallback, don't assume permission needed
-            return "calling_tools"
-        if self._is_tool_pre_approved(tool_name):
-            return "calling_tools"
-        # tool not in permissions.allow → user will be asked for permission
-        return "permission"
-
-    # ------------------------------------------------------------------
-    # Internals
-    # ------------------------------------------------------------------
-
-    def _is_tool_pre_approved(self, tool_name: str) -> bool:
-        """Return True if *tool_name* matches any entry in permissions.allow.
-
-        Claude Code allow patterns look like:
-          "Bash(git *)", "Read(*)", "Edit(*)", "Bash"
-        We match on the tool-name prefix only (before the first '(').
-        """
-        for settings_path in (SETTINGS_LOCAL, SETTINGS_HOOKS):
-            if not settings_path.exists():
-                continue
-            try:
-                data = json.loads(settings_path.read_text())
-                allowed = data.get("permissions", {}).get("allow", [])
-                for pattern in allowed:
-                    pat_tool = pattern.split("(")[0].strip()
-                    if pat_tool.lower() == tool_name.lower():
-                        return True
-            except Exception:
-                pass
-        return False

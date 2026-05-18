@@ -28,6 +28,7 @@ HOOK_EVENTS = [
     "PostToolUse",
     "Stop",
     "Notification",
+    "PermissionRequest",
 ]
 
 DEFAULT_THEME = "default"

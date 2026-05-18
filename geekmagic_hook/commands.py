@@ -64,12 +64,12 @@ def cmd_event(event: str) -> int:
     if event == "Notification":
         stdin_data = sys.stdin.read() if not sys.stdin.isatty() else ""
         state = ctrl.parse_notification(stdin_data)
+        if state is None:
+            log.debug("Notification ignored (not rate-limited)")
+            return 0
     elif event == "UserPromptSubmit":
         # First prompt in a fresh session → starting.gif; subsequent → prompt_received.gif
         state = "starting" if hook_state.current is None else "prompt_received"
-    elif event == "PreToolUse":
-        stdin_data = sys.stdin.read() if not sys.stdin.isatty() else ""
-        state = ctrl.resolve_pretooluse_state(stdin_data)
     else:
         state = DisplayController.EVENT_STATES.get(event, "working")
 
