@@ -12,7 +12,6 @@ Every time Claude Code changes state (thinking, using a tool, waiting, rate-limi
 | Prompt received (subsequent) | `prompt_received.gif` |
 | Calling a tool (Bash, Read, Edit…) | `calling_tools.gif` |
 | Tool finished, still working | `working.gif` |
-| Subagent completed | `working.gif` |
 | Idle — waiting for next prompt | `waiting.gif` |
 | Waiting for your permission | `permission.gif` |
 | Rate-limited | `rate_limited.gif` |
@@ -60,15 +59,11 @@ See [`geekmagic_hook/README.md`](geekmagic_hook/README.md) for full documentatio
 
 ## Creating Custom GIF Themes
 
-```bash
-# Requires: pip install "imageio[pyav]" Pillow
-cd gif
-python3 convert_to_gif.py -i ./my_videos -o ./my_theme
+Prepare a folder of **240×240 px** GIF files named after the states above, then upload:
 
+```bash
 geekmagic_hook theme upload ./my_theme
 ```
-
-GIFs must be **240×240 px**. See [`gif/README.md`](gif/README.md).
 
 ## How It Works
 
@@ -88,14 +83,10 @@ Key design decisions:
 
 ```
 geekmagic-hook/
-├── pyproject.toml               # Package metadata (pip/pipx installable)
+├── pyproject.toml
 ├── geekmagic_hook/
-│   ├── geekmagic_hook.py        # Single-file Python app (stdlib only)
 │   └── themes/
-│       └── default/             # Bundled GIF set (6 animations)
-├── gif/
-│   ├── convert_to_gif.py        # Video → 240x240 GIF converter
-│   └── *.mov                    # Source animations
+│       └── default/             # Bundled GIF set (7 animations)
 └── docs/
     └── protocol.md              # GeekMagic HTTP API reference
 ```
